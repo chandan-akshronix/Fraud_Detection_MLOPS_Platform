@@ -1,0 +1,68 @@
+"""
+Application Configuration
+Uses Pydantic Settings for environment variable management.
+"""
+from functools import lru_cache
+from typing import List
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
+    
+    # Application
+    APP_NAME: str = "Shadow Hubble"
+    DEBUG: bool = False
+    API_V1_PREFIX: str = "/api/v1"
+    
+    # CORS
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://shadowhubble:localdev123@localhost:5432/shadowhubble"
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_MAX_OVERFLOW: int = 5
+    
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_FEATURE_TTL: int = 86400  # 24 hours
+    
+    # Azure Blob Storage
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_STORAGE_CONTAINER_DATASETS: str = "datasets"
+    AZURE_STORAGE_CONTAINER_MODELS: str = "models"
+    
+    # Azure AD B2C
+    AZURE_AD_B2C_TENANT: str = ""
+    AZURE_AD_B2C_CLIENT_ID: str = ""
+    AZURE_AD_B2C_POLICY: str = "B2C_1_signupsignin"
+    
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    
+    # ML Settings
+    MAX_FEATURES: int = 30
+    DEFAULT_TRAIN_TEST_SPLIT: float = 0.8
+    PSI_WARNING_THRESHOLD: float = 0.1
+    PSI_CRITICAL_THRESHOLD: float = 0.25
+    
+    # Security
+    SECRET_KEY: str = "dev-secret-key-change-in-production"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
+
+
+settings = get_settings()

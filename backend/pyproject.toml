@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "shadow-hubble-backend"
+version = "0.1.0"
+description = "Fraud Detection MLOps Platform API"
+authors = ["Shadow Hubble Team"]
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.25"}
+alembic = "^1.13.0"
+asyncpg = "^0.29.0"
+redis = "^5.0.0"
+celery = {extras = ["redis"], version = "^5.3.0"}
+azure-storage-blob = "^12.19.0"
+azure-identity = "^1.15.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+httpx = "^0.26.0"
+python-multipart = "^0.0.6"
+
+# ML dependencies
+scikit-learn = "^1.4.0"
+xgboost = "^2.0.0"
+lightgbm = "^4.0.0"
+pandas = "^2.1.0"
+numpy = "^1.26.0"
+shap = "^0.44.0"
+evidently = "^0.4.0"
+fairlearn = "^0.10.0"
+onnxruntime = "^1.16.0"
+onnxmltools = "^1.12.0"
+skl2onnx = "^1.16.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+ruff = "^0.1.0"
+black = "^23.12.0"
+mypy = "^1.8.0"
+pre-commit = "^3.6.0"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
