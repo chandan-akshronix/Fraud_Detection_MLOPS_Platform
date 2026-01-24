@@ -34,9 +34,16 @@ class Settings(BaseSettings):
     REDIS_FEATURE_TTL: int = 86400  # 24 hours
     
     # Azure Blob Storage
+    # Azure Blob Storage - All 8 Containers
     AZURE_STORAGE_CONNECTION_STRING: str = ""
     AZURE_STORAGE_CONTAINER_DATASETS: str = "datasets"
     AZURE_STORAGE_CONTAINER_MODELS: str = "models"
+    AZURE_STORAGE_CONTAINER_FEATURES: str = "features"
+    AZURE_STORAGE_CONTAINER_MONITORING: str = "monitoring"
+    AZURE_STORAGE_CONTAINER_AUDIT_LOGS: str = "audit-logs"
+    AZURE_STORAGE_CONTAINER_EXPERIMENTS: str = "experiments"
+    AZURE_STORAGE_CONTAINER_BACKUPS: str = "backups"
+    AZURE_STORAGE_CONTAINER_TEMP_PROCESSING: str = "temp-processing"
     
     # Azure AD B2C
     AZURE_AD_B2C_TENANT: str = ""

@@ -141,14 +141,38 @@ async def get_dataset_schema(
     }
 
 
+@router.get("/{dataset_id}/download")
+async def get_dataset_download_url(
+    dataset_id: UUID,
+    expiry_hours: int = 1,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generate a temporary download URL for a dataset.
+    
+    - **expiry_hours**: Hours until the URL expires (default: 1, max: 24)
+    """
+    service = DataService(db)
+    download_url = await service.get_dataset_download_url(
+        str(dataset_id), 
+        expiry_hours=min(expiry_hours, 24)
+    )
+    if not download_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset {dataset_id} not found"
+        )
+    return {"data": {"download_url": download_url, "expires_in_hours": expiry_hours}}
+
+
 @router.delete("/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_dataset(
     dataset_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a dataset (soft delete - marks as ARCHIVED)."""
+    """Delete a dataset (hard delete - removes from database and storage)."""
     service = DataService(db)
-    success = await service.delete_dataset(str(dataset_id))
+    success = await service.delete_dataset(str(dataset_id), hard_delete=True)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

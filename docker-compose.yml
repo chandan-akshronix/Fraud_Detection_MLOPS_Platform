@@ -34,7 +34,7 @@ services:
 
   # Azurite (Azure Storage Emulator)
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite
+    image: mcr.microsoft.com/azure-storage/azurite:latest
     container_name: shadowhubble-azurite
     ports:
       - "10000:10000" # Blob

@@ -14,6 +14,7 @@ from app.api.v1.alerts import router as alerts_router
 from app.api.v1.jobs import router as jobs_router
 from app.api.v1.retraining import router as retraining_router
 from app.api.v1.ab_testing import router as ab_testing_router
+from app.api.v1.dashboard import router as dashboard_router
 
 api_router = APIRouter()
 
@@ -28,5 +29,6 @@ api_router.include_router(alerts_router)
 api_router.include_router(jobs_router)
 api_router.include_router(retraining_router)
 api_router.include_router(ab_testing_router)
+api_router.include_router(dashboard_router)
 
 
