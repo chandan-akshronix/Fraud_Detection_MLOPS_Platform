@@ -86,4 +86,11 @@ export const datasetService = {
         const response = await axios.get(`${API_BASE}/datasets/${id}/preview?rows=${rows}`);
         return response.data.data;
     },
+    /**
+     * Get a temporary download URL for a dataset.
+     */
+    async getDownloadUrl(id: string, expiryHours = 10): Promise<{ download_url: string; expires_in_hours: number }> {
+        const response = await axios.get(`${API_BASE}/datasets/${id}/download?expiry_hours=${expiryHours}`);
+        return response.data.data;
+    },
 };

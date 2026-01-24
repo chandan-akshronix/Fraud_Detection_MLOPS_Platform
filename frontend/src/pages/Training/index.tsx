@@ -3,14 +3,16 @@
  * Configure and run model training jobs with a step wizard.
  */
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Card, Steps, Button, Select, Form, InputNumber, Slider,
     Table, Tag, Progress, Typography, Row, Col, Space, Divider,
-    Radio, message, Alert
+    Radio, message, Alert, Popconfirm
 } from 'antd';
 import {
     ExperimentOutlined, PlayCircleOutlined, CheckCircleOutlined,
-    DatabaseOutlined, SettingOutlined, RocketOutlined
+    DatabaseOutlined, SettingOutlined, RocketOutlined, PlusOutlined,
+    DeleteOutlined
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trainingService, Algorithm } from '@/services/trainingService';
@@ -20,6 +22,7 @@ const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 export function Training() {
+    const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(0);
     const [selectedDataset, setSelectedDataset] = useState<string | null>(null);
     const [selectedFeatureSet, setSelectedFeatureSet] = useState<string | null>(null);
@@ -45,6 +48,21 @@ export function Training() {
     const { data: trainingJobs, isLoading: jobsLoading } = useQuery({
         queryKey: ['trainingJobs'],
         queryFn: () => trainingService.listJobs(),
+    });
+
+    // Delete feature set mutation
+    const deleteFeatureSetMutation = useMutation({
+        mutationFn: (id: string) => featureService.deleteFeatureSet(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['featureSets'] });
+            message.success('Feature set deleted successfully');
+            if (selectedFeatureSet) {
+                setSelectedFeatureSet(null);
+            }
+        },
+        onError: () => {
+            message.error('Failed to delete feature set');
+        },
     });
 
     // Create training job mutation
@@ -134,8 +152,52 @@ export function Training() {
                                     ),
                                 },
                                 { title: 'Created', dataIndex: 'created_at', key: 'created_at' },
+                                {
+                                    title: 'Actions',
+                                    key: 'actions',
+                                    render: (_: unknown, record: { id: string; name: string }) => (
+                                        <Popconfirm
+                                            title="Delete feature set"
+                                            description="Are you sure you want to delete this feature set?"
+                                            onConfirm={(e) => {
+                                                e?.stopPropagation();
+                                                deleteFeatureSetMutation.mutate(record.id);
+                                            }}
+                                            onCancel={(e) => e?.stopPropagation()}
+                                            okText="Yes"
+                                            cancelText="No"
+                                        >
+                                            <Button
+                                                size="small"
+                                                danger
+                                                icon={<DeleteOutlined />}
+                                                onClick={(e) => e.stopPropagation()}
+                                                loading={deleteFeatureSetMutation.isPending}
+                                            />
+                                        </Popconfirm>
+                                    ),
+                                },
                             ]}
                             pagination={false}
+                            locale={{
+                                emptyText: (
+                                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                                        <DatabaseOutlined style={{ fontSize: 40, color: '#d9d9d9', marginBottom: 16 }} />
+                                        <Paragraph>
+                                            <Text type="secondary" strong>No feature sets found.</Text>
+                                            <br />
+                                            <Text type="secondary">You need to compute features for a dataset before you can start training.</Text>
+                                        </Paragraph>
+                                        <Button
+                                            type="primary"
+                                            icon={<PlusOutlined />}
+                                            onClick={() => navigate('/data')}
+                                        >
+                                            Go to Data Registry
+                                        </Button>
+                                    </div>
+                                )
+                            }}
                         />
                     </Card>
                 );

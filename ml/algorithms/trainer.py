@@ -7,6 +7,10 @@ import pandas as pd
 from typing import Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler
+from ml.transformers.fraud_feature_engineer import FraudFeatureEngineer
 from sklearn.metrics import (
     precision_score, recall_score, f1_score, 
     roc_auc_score, confusion_matrix, classification_report
@@ -34,11 +38,13 @@ class TrainingConfig:
 class TrainingResult:
     """Result of model training."""
     model: Any
+    pipeline: Any
     metrics: Dict[str, float]
     feature_importance: Dict[str, float]
     feature_names: list
     confusion_matrix: np.ndarray
     classification_report: str
+    onnx_bytes: Optional[bytes] = None
 
 
 class FraudDetectionTrainer:
@@ -55,28 +61,11 @@ class FraudDetectionTrainer:
     def __init__(self, config: TrainingConfig = None):
         self.config = config or TrainingConfig()
         self.model = None
+        self.pipeline = None
         self.feature_names = []
     
-    def train(
-        self, 
-        X: pd.DataFrame, 
-        y: pd.Series
-    ) -> TrainingResult:
-        """
-        Train a fraud detection model.
-        
-        Args:
-            X: Feature DataFrame
-            y: Target series (0=legit, 1=fraud)
-        
-        Returns:
-            TrainingResult with model and metrics
-        """
-        logger.info(f"Training {self.config.algorithm} model...")
-        
-        # Store feature names
-        self.feature_names = list(X.columns)
-        
+    def train(self, X: pd.DataFrame, y: pd.Series):
+        """Train the fraud detection model."""
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(
             X, y,
@@ -84,18 +73,21 @@ class FraudDetectionTrainer:
             random_state=self.config.random_state,
             stratify=y
         )
-        logger.info(f"Train: {len(X_train)}, Test: {len(X_test)}")
         
         # Handle imbalanced data
         X_train, y_train = self._handle_imbalanced(X_train, y_train)
         
-        # Create and train model
-        self.model = self._create_model(y_train)
-        self.model.fit(X_train, y_train)
+        # BUILD SKLEARN PIPELINE
+        self.pipeline = self._build_pipeline(y_train)
+        self.pipeline.fit(X_train, y_train)
+        
+        # Extract the trained model from pipeline
+        self.model = self.pipeline.named_steps['model']
+        self.feature_names = self.pipeline.named_steps['fraud_features'].feature_names_out_
         
         # Evaluate
-        y_pred = self.model.predict(X_test)
-        y_prob = self._get_probabilities(X_test)
+        y_pred = self.pipeline.predict(X_test)
+        y_prob = self.pipeline.predict_proba(X_test)[:, 1]
         
         # Compute metrics
         metrics = self._compute_metrics(y_test, y_pred, y_prob)
@@ -106,6 +98,7 @@ class FraudDetectionTrainer:
         # Build result
         result = TrainingResult(
             model=self.model,
+            pipeline=self.pipeline,
             metrics=metrics,
             feature_importance=importance,
             feature_names=self.feature_names,
@@ -252,12 +245,42 @@ class FraudDetectionTrainer:
     
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         """Make predictions."""
-        if self.model is None:
+        if self.pipeline is None:
             raise ValueError("Model not trained")
-        return self.model.predict(X)
+        return self.pipeline.predict(X)
     
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """Get prediction probabilities."""
-        if self.model is None:
+        if self.pipeline is None:
             raise ValueError("Model not trained")
-        return self._get_probabilities(X)
+        return self.pipeline.predict_proba(X)[:, 1]
+    
+    def _build_pipeline(self, y_train: pd.Series) -> Pipeline:
+        """
+        Build sklearn Pipeline with preprocessing + model.
+        For tree-based models (XGBoost, LightGBM, RandomForest):
+        - No scaling needed (tree models are scale-invariant)
+        - FraudFeatureEngineer already handles all preprocessing
+        For other models:
+        - Add StandardScaler for better convergence
+        """
+        fraud_engineer = FraudFeatureEngineer()
+        model = self._create_model(y_train)
+        
+        # Tree models don't need scaling
+        if self.config.algorithm in ['xgboost', 'lightgbm', 'random_forest', 'isolation_forest']:
+            pipeline = Pipeline([
+                ('fraud_features', fraud_engineer),
+                ('model', model)
+            ])
+            logger.info(f"Built pipeline for {self.config.algorithm} (no scaling)")
+        else:
+            # Future: other algorithms that benefit from scaling
+            pipeline = Pipeline([
+                ('fraud_features', fraud_engineer),
+                ('scaler', StandardScaler()),
+                ('model', model)
+            ])
+            logger.info(f"Built pipeline for {self.config.algorithm} (with scaling)")
+        
+        return pipeline
